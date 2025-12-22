@@ -270,12 +270,47 @@
         const SUPABASE_URL = 'https://gnaczccnprnuqbjmzdts.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImduYWN6Y2NucHJudXFiam16ZHRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzNzQ2MTIsImV4cCI6MjA4MTk1MDYxMn0.A4__oNG_N_M5x61wI12fk-iTXZgsMDDRvYQRT0cmSmg';
 
+        // Tabla de conversión de nombres GeoJSON → Encuesta
+        const MAPEO_BARRIOS = {
+            'CIUTAT VELLA': 'Ciutat Vella',
+            'RASCANYA': 'Rascanya',
+            'BENICALAP': 'Benicalap',
+            'EL PLA DEL REAL': 'El Pla del Real',
+            'POBLATS DEL SUD': 'Pobles del Sud',
+            'POBLATS DE L\'OEST': 'Pobles de l\'Oest',
+            'L\'EIXAMPLE': 'Eixample',
+            'JESUS': 'Jesús',
+            'L\'OLIVERETA': 'L\'Olivereta',
+            'POBLATS DEL NORD': 'Pobles del Nord',
+            'LA SAIDIA': 'La Saïdia',
+            'BENIMACLET': 'Benimaclet',
+            'PATRAIX': 'Patraix',
+            'ALGIROS': 'Algirós',
+            'POBLATS MARITIMS': 'Poblats Marítims',
+            'QUATRE CARRERES': 'Quatre Carreres',
+            'CAMINS AL GRAU': 'Camins al Grau',
+            'EXTRAMURS': 'Extramurs',
+            'CAMPANAR': 'Campanar'
+        };
+
         // Estado global
         let map;
         let geojsonLayer;
         let encuestas = [];
         let estadisticas = {};
         let problematicaActual = 'promedio';
+
+        // Convertir nombre del GeoJSON al nombre de la encuesta
+        function convertirNombreBarrio(nombreGeoJSON) {
+            const nombreUpper = nombreGeoJSON.toUpperCase().trim();
+            return MAPEO_BARRIOS[nombreUpper] || nombreGeoJSON;
+        }
+
+        // Buscar estadísticas por barrio (con conversión)
+        function buscarEstadisticas(nombreBarrio) {
+            const nombreConvertido = convertirNombreBarrio(nombreBarrio);
+            return estadisticas[nombreConvertido] || null;
+        }
 
         // Inicializar mapa
         function initMap() {
@@ -313,6 +348,7 @@
                 actualizarRanking();
                 
                 console.log('✅ Datos cargados:', encuestas.length);
+                console.log('📊 Barrios con datos:', Object.keys(estadisticas));
             } catch (error) {
                 console.error('Error cargando datos:', error);
                 document.getElementById('totalEncuestas').textContent = 'Error al cargar';
@@ -379,10 +415,10 @@
 
         // Obtener color según valor
         function getColor(valor) {
-            if (valor <= 3) return '#10b981';      // Verde
-            if (valor <= 6) return '#f59e0b';      // Amarillo
-            if (valor <= 8) return '#f97316';      // Naranja
-            return '#ef4444';                       // Rojo
+            if (valor <= 3) return '#10b981';
+            if (valor <= 6) return '#f59e0b';
+            if (valor <= 8) return '#f97316';
+            return '#ef4444';
         }
 
         // Obtener clase de valor
@@ -418,8 +454,8 @@
 
         // Estilo de cada barrio
         function styleFeature(feature) {
-            const barrio = feature.properties.name;
-            const stats = estadisticas[barrio];
+            const barrio = feature.properties.name || feature.properties.NAME || feature.properties.nombre;
+            const stats = buscarEstadisticas(barrio);
             
             let valor = 0;
             if (stats && stats.promedios) {
@@ -437,7 +473,7 @@
 
         // Interacción con cada barrio
         function onEachFeature(feature, layer) {
-            const barrio = feature.properties.name;
+            const barrio = feature.properties.name || feature.properties.NAME || feature.properties.nombre;
             
             layer.on({
                 mouseover: highlightFeature,
@@ -460,13 +496,17 @@
         }
 
         function mostrarPopup(layer, barrio) {
-            const stats = estadisticas[barrio];
+            const nombreConvertido = convertirNombreBarrio(barrio);
+            const stats = buscarEstadisticas(barrio);
             
             if (!stats) {
                 layer.bindPopup(`
                     <div style="min-width: 200px;">
                         <h3>${barrio}</h3>
                         <p>No hay datos de encuestas para este barrio</p>
+                        <p style="font-size: 11px; color: #6b7280; margin-top: 10px;">
+                            Buscando como: "${nombreConvertido}"
+                        </p>
                     </div>
                 `).openPopup();
                 return;
@@ -476,7 +516,7 @@
             
             const content = `
                 <div style="min-width: 250px;">
-                    <h3>${barrio}</h3>
+                    <h3>${nombreConvertido}</h3>
                     <div class="popup-stats">
                         <p><strong>Encuestas:</strong> ${stats.count}</p>
                         <hr style="margin: 10px 0; border: none; border-top: 1px solid #e5e7eb;">
@@ -504,6 +544,11 @@
                 .sort((a, b) => b.valor - a.valor)
                 .slice(0, 5);
             
+            if (ranking.length === 0) {
+                document.getElementById('rankingList').innerHTML = '<p style="padding: 20px; text-align: center; color: #6b7280;">No hay datos disponibles.<br>Realiza encuestas primero.</p>';
+                return;
+            }
+            
             const html = ranking.map((item, index) => `
                 <div class="ranking-item">
                     <span class="name">${index + 1}. ${item.barrio}</span>
@@ -511,7 +556,7 @@
                 </div>
             `).join('');
             
-            document.getElementById('rankingList').innerHTML = html || '<p>No hay datos disponibles</p>';
+            document.getElementById('rankingList').innerHTML = html;
         }
 
         // Cambiar problemática
@@ -526,6 +571,11 @@
         // Inicializar
         initMap();
         cargarDatos();
+        
+        // Debug
+        setTimeout(() => {
+            console.log('📊 Barrios en base de datos:', Object.keys(estadisticas));
+        }, 2000);
         
         console.log('✅ Mapa inicializado');
     </script>
