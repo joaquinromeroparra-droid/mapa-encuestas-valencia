@@ -363,54 +363,54 @@
                 if (!estadisticas[e.barrio]) {
                     estadisticas[e.barrio] = {
                         count: 0,
-                        seguridad: [],
-                        limpieza: [],
-                        transporte: [],
-                        zonas_verdes: [],
-                        ruido: [],
-                        calles: [],
-                        sanidad: [],
-                        comercio: [],
-                        vivienda: []
+                        sumas: {
+                            seguridad: 0,
+                            limpieza: 0,
+                            transporte: 0,
+                            zonas_verdes: 0,
+                            ruido: 0,
+                            calles: 0,
+                            sanidad: 0,
+                            comercio: 0,
+                            vivienda: 0
+                        },
+                        promedios: {}
                     };
                 }
                 
                 estadisticas[e.barrio].count++;
-                estadisticas[e.barrio].seguridad.push(e.seguridad || 0);
-                estadisticas[e.barrio].limpieza.push(e.limpieza || 0);
-                estadisticas[e.barrio].transporte.push(e.transporte || 0);
-                estadisticas[e.barrio].zonas_verdes.push(e.zonas_verdes || 0);
-                estadisticas[e.barrio].ruido.push(e.ruido || 0);
-                estadisticas[e.barrio].calles.push(e.calles || 0);
-                estadisticas[e.barrio].sanidad.push(e.sanidad || 0);
-                estadisticas[e.barrio].comercio.push(e.comercio || 0);
-                estadisticas[e.barrio].vivienda.push(e.vivienda || 0);
+                estadisticas[e.barrio].sumas.seguridad += (e.seguridad || 0);
+                estadisticas[e.barrio].sumas.limpieza += (e.limpieza || 0);
+                estadisticas[e.barrio].sumas.transporte += (e.transporte || 0);
+                estadisticas[e.barrio].sumas.zonas_verdes += (e.zonas_verdes || 0);
+                estadisticas[e.barrio].sumas.ruido += (e.ruido || 0);
+                estadisticas[e.barrio].sumas.calles += (e.calles || 0);
+                estadisticas[e.barrio].sumas.sanidad += (e.sanidad || 0);
+                estadisticas[e.barrio].sumas.comercio += (e.comercio || 0);
+                estadisticas[e.barrio].sumas.vivienda += (e.vivienda || 0);
             });
             
-            // Calcular promedios
+            // Calcular promedios dividiendo las sumas entre el número de encuestas
             Object.keys(estadisticas).forEach(barrio => {
                 const s = estadisticas[barrio];
+                const count = s.count;
+                
                 s.promedios = {
-                    seguridad: calcularPromedio(s.seguridad),
-                    limpieza: calcularPromedio(s.limpieza),
-                    transporte: calcularPromedio(s.transporte),
-                    zonas_verdes: calcularPromedio(s.zonas_verdes),
-                    ruido: calcularPromedio(s.ruido),
-                    calles: calcularPromedio(s.calles),
-                    sanidad: calcularPromedio(s.sanidad),
-                    comercio: calcularPromedio(s.comercio),
-                    vivienda: calcularPromedio(s.vivienda)
+                    seguridad: s.sumas.seguridad / count,
+                    limpieza: s.sumas.limpieza / count,
+                    transporte: s.sumas.transporte / count,
+                    zonas_verdes: s.sumas.zonas_verdes / count,
+                    ruido: s.sumas.ruido / count,
+                    calles: s.sumas.calles / count,
+                    sanidad: s.sumas.sanidad / count,
+                    comercio: s.sumas.comercio / count,
+                    vivienda: s.sumas.vivienda / count
                 };
                 
-                // Promedio general
+                // Promedio general (media de todos los promedios)
                 const valores = Object.values(s.promedios);
                 s.promedios.promedio = valores.reduce((a, b) => a + b, 0) / valores.length;
             });
-        }
-
-        function calcularPromedio(arr) {
-            if (arr.length === 0) return 0;
-            return arr.reduce((a, b) => a + b, 0) / arr.length;
         }
 
         // Obtener color según valor
